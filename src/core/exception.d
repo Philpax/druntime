@@ -673,4 +673,32 @@ else
         onHiddenFuncError(o);
     }
 }
+
+    // weka-io: testing throwing of static exceptions
+    unittest
+    {
+        void throwStaticException()
+        {
+            static exception = new UnicodeException("Testing 123", 0);
+            throw exception;
+        }
+
+        try
+        {
+            try
+            {
+                throwStaticException();
+            }
+            catch (Exception e)
+            {
+                assert(e.msg == "Testing 123");
+                e.msg ~= '4';
+                throw e;
+            }
+        }
+        catch (Exception e)
+        {
+            assert(e.msg == "Testing 1234");
+        }
+    }
 }
