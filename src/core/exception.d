@@ -674,31 +674,72 @@ else
     }
 }
 
-    // weka-io: testing throwing of static exceptions
-    unittest
+    version (unittest)
     {
-        void throwStaticException()
+        struct MemoryBlock
         {
-            static exception = new UnicodeException("Testing 123", 0);
-            throw exception;
+        @nogc:
+            import core.stdc.stdlib : malloc, free;
+            void* p;
+            this(uint size) { p = malloc(size); }
+            ~this() { free(p); }
         }
 
-        try
+        // weka-io: test throwing of static exceptions
+        unittest
         {
+            void throwStaticException() @nogc
+            {
+                static exception = new UnicodeException("Testing 123", 0);
+                throw exception;
+            }
+
             try
             {
-                throwStaticException();
+                try
+                {
+                    auto block = MemoryBlock(64);
+                    throwStaticException();
+                }
+                catch (Exception e)
+                {
+                    assert(e.msg == "Testing 123");
+                    e.msg ~= '4';
+                    throw e;
+                }
             }
             catch (Exception e)
             {
-                assert(e.msg == "Testing 123");
-                e.msg ~= '4';
-                throw e;
+                assert(e.msg == "Testing 1234");
             }
         }
-        catch (Exception e)
+
+        // weka-io: test throwing of non-static exceptions
+        unittest
         {
-            assert(e.msg == "Testing 1234");
+            void throwNewException()
+            {
+                throw new UnicodeException("Testing 123", 0);
+            }
+
+            try
+            {
+                try
+                {
+                    auto block = MemoryBlock(64);
+                    throwNewException();
+                }
+                catch (Exception e)
+                {
+                    assert(e.msg == "Testing 123");
+                    e.msg ~= '4';
+                    throw e;
+                }
+            }
+            catch (Exception e)
+            {
+                assert(e.msg == "Testing 1234");
+            }
         }
     }
 }
