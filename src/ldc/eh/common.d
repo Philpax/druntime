@@ -362,6 +362,10 @@ void pushCleanupBlockRecord(ptrdiff_t cfaAddr, Object dObject)
         // recursive code with many finally blocks.
         fatalerror("Could not allocate memory for exception chaining.");
     }
+
+    debug(EH_personality_verbose)
+        printf("  - pushCleanupBlockRecord: pushed ACB %llx, innermostCleanupBlock: %llx\n", acb, innermostCleanupBlock);
+
     acb.cfaAddr = cfaAddr;
     acb.dObject = dObject;
     acb.outerBlock = innermostCleanupBlock;
@@ -387,6 +391,13 @@ void popCleanupBlockRecord()
     GC.removeRoot(cast(void*)acb.dObject);
     innermostCleanupBlock = acb.outerBlock;
     free(acb);
+
+    debug(EH_personality_verbose)
+    {
+        printf("  - popCleanupBlockRecord: freed ACB %llx, innermostCleanupBlock: %llx\n", acb, innermostCleanupBlock);
+        if (!innermostCleanupBlock)
+            printf("  - popCleanupBlockRecord: reached end of block chain\n", acb);
+    }
 }
 
 
