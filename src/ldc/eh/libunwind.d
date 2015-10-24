@@ -4,6 +4,9 @@
  */
 module ldc.eh.libunwind;
 
+import core.stdc.stdio;
+import core.stdc.stdlib : malloc, free;
+
 version (Win64) {} else
 {
 
@@ -414,7 +417,8 @@ void _d_throw_exception(Object e)
     if (throwable.info is null && cast(byte*)throwable !is typeid(throwable).init.ptr)
         throwable.info = _d_traceContext();
 
-    auto exc_struct = new _d_exception;
+    // weka-io TODO: Use pre-reserved memory for OOM exceptions
+    auto exc_struct = cast(_d_exception*)malloc(_d_exception.sizeof);
     version (ARM)
     {
         exc_struct.unwind_info.exception_class = _d_exception_class;
@@ -423,6 +427,7 @@ void _d_throw_exception(Object e)
     {
         exc_struct.unwind_info.exception_class = *cast(ulong*)_d_exception_class.ptr;
     }
+
     exc_struct.exception_object = e;
 
     debug(EH_personality)
@@ -452,6 +457,20 @@ void _d_eh_resume_unwind(_d_exception* exception_struct)
 
     popCleanupBlockRecord();
     _Unwind_Resume(&exception_struct.unwind_info);
+}
+
+/// Called by our compiler-generated code to destroy a _d_exception if all goes well
+void _d_eh_destroy_exception(_d_exception* exception)
+{
+    if (!exception)
+        return;
+
+    debug(EH_personality)
+    {
+        printf("= Destroying exception struct at %p\n", exception);
+    }
+
+    free(exception);
 }
 
 void _d_eh_enter_catch()
