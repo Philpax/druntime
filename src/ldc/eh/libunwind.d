@@ -403,6 +403,11 @@ extern(C) Throwable.TraceInfo _d_traceContext(void* ptr = null);
 
 public extern(C):
 
+debug (EH_personality)
+{
+    private __gshared uint exceptionStructsInFlight;
+}
+
 /// Called by our compiler-generated code to throw an exception.
 void _d_throw_exception(Object e)
 {
@@ -432,8 +437,9 @@ void _d_throw_exception(Object e)
 
     debug(EH_personality)
     {
-        printf("= Throwing new exception of type %s: %p (struct at %p, classinfo at %p)\n",
-            e.classinfo.name.ptr, e, exc_struct, e.classinfo);
+        ++exceptionStructsInFlight;
+        printf("= Throwing new exception of type %s: %p (struct #%i at %p, classinfo at %p)\n",
+            e.classinfo.name.ptr, e, exceptionStructsInFlight, exc_struct, e.classinfo);
     }
 
     searchPhaseClassInfo = e.classinfo;
@@ -467,7 +473,8 @@ void _d_eh_destroy_exception(_d_exception* exception)
 
     debug(EH_personality)
     {
-        printf("= Destroying exception struct at %p\n", exception);
+        printf("= Destroying exception struct %i at %p\n", exceptionStructsInFlight, exception);
+        exceptionStructsInFlight--;
     }
 
     free(exception);
