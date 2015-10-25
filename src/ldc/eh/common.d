@@ -16,7 +16,7 @@ import core.stdc.stdarg;
 extern(C) int _d_isbaseof(ClassInfo oc, ClassInfo c);
 
 // error and exit
-extern(C) void fatalerror(in char* format, ...)
+extern(C) void fatalerror(in char* format, ...) @nogc
 {
     va_list args;
     va_start(args, format);

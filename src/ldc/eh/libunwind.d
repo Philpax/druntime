@@ -18,6 +18,7 @@ import ldc.eh.common;
 private:
 
 // C headers
+@nogc {
 extern(C)
 {
     // FIXME: Some of these do not actually exist on ARM.
@@ -90,7 +91,7 @@ extern(C)
     ptrdiff_t _Unwind_GetTextRelBase(_Unwind_Context_Ptr context);
     ptrdiff_t _Unwind_GetDataRelBase(_Unwind_Context_Ptr context);
 }
-
+}
 
 // Exception struct used by the runtime.
 // _d_throw allocates a new instance and passes the address of its
@@ -398,7 +399,7 @@ else // !ARM
 }
 
 extern(C) Throwable.TraceInfo _d_traceContext(void* ptr = null);
-
+alias NoGCTraceContext = extern (C) Throwable.TraceInfo function(void* ptr = null) @nogc;
 
 
 public extern(C):
@@ -409,7 +410,7 @@ debug (EH_personality)
 }
 
 /// Called by our compiler-generated code to throw an exception.
-void _d_throw_exception(Object e)
+void _d_throw_exception(Object e) @nogc
 {
     if (e is null)
         fatalerror("Cannot throw null exception");
@@ -420,7 +421,10 @@ void _d_throw_exception(Object e)
     auto throwable = cast(Throwable) e;
 
     if (throwable.info is null && cast(byte*)throwable !is typeid(throwable).init.ptr)
-        throwable.info = _d_traceContext();
+    {
+        // _d_traceContext may allocate, but we don't mind
+        throwable.info = (cast(NoGCTraceContext)&_d_traceContext)();
+    }
 
     // weka-io TODO: Use pre-reserved memory for OOM exceptions
     auto exc_struct = cast(_d_exception*)malloc(_d_exception.sizeof);
